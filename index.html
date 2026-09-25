@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pakistan GIS • Administrative Explorer • V10</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden}
+body{font-family:Arial,Helvetica,sans-serif;background:#eef2f6;color:#1f2937}
+
+.app{width:100vw;height:100vh;display:grid;grid-template-rows:58px minmax(0,1fr);overflow:hidden}
+.header{height:58px;background:#17324d;color:#fff;display:flex;align-items:center;padding:0 18px;gap:14px}
+.header h1{font-size:20px;margin:0;font-weight:700}
+.header span{font-size:12px;opacity:.8}
+
+.content{min-height:0;height:100%;display:grid;grid-template-columns:270px minmax(0,1fr) 285px;overflow:hidden}
+
+.left,.right{background:#fff;min-height:0;overflow-y:auto;padding:15px}
+.left{border-right:1px solid #d9e0e7}
+.right{border-left:1px solid #d9e0e7}
+
+.map-container{position:relative;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden}
+#map{position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;background:#dbe7ef}
+
+.title{font-size:14px;font-weight:700;color:#17324d;margin:0 0 12px}
+label{display:block;font-size:12px;font-weight:700;color:#475569;margin:11px 0 5px}
+select,input,button{width:100%;height:37px;border:1px solid #cbd5e1;border-radius:7px;padding:0 9px;font-size:13px;background:#fff}
+button{margin-top:9px;background:#17324d;color:white;border-color:#17324d;font-weight:700;cursor:pointer}
+button.secondary{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
+
+.card{border:1px solid #e2e8f0;background:#f8fafc;border-radius:9px;padding:11px;margin-bottom:10px}
+.kpi{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:12px}
+.kpi:last-child{border-bottom:0}
+.kpi strong{color:#17324d;font-size:13px}
+
+.stat-big{font-size:25px;font-weight:700;color:#17324d;margin:4px 0}
+.stat-label{font-size:11px;color:#64748b}
+
+.info-row{font-size:12px;padding:5px 0;border-bottom:1px solid #e5e7eb;line-height:1.35}
+.info-row b{display:inline-block;width:100px;color:#475569}
+.status{font-size:11px;color:#64748b;margin-top:10px}
+.shape-card{background:#f8fafc}
+.shape-area-value{
+  font-size:24px;
+  font-weight:800;
+  color:#17324d;
+  margin-top:4px;
+  word-break:break-word;
+}
+.shape-area-note,.pie-note{
+  font-size:10px;
+  color:#64748b;
+  margin-top:4px;
+  line-height:1.35;
+}
+.pie-card{padding:12px}
+.pie-title{
+  font-size:12px;
+  font-weight:700;
+  color:#17324d;
+  margin-bottom:7px;
+}
+.pie-wrap{
+  position:relative;
+  width:100%;
+  height:225px;
+}
+#shapeAreaPie{
+  width:100%!important;
+  height:100%!important;
+}
+
+
+.legend-row{display:flex;align-items:center;gap:7px;font-size:11px;margin:6px 0}
+.swatch{width:18px;height:12px;border:1px solid #64748b;border-radius:2px}
+
+.leaflet-container{font:12px Arial,Helvetica,sans-serif}
+.leaflet-popup-content{margin:12px 14px}
+.popup-title{font-weight:700;color:#17324d;font-size:14px;margin-bottom:7px}
+.popup-row{font-size:12px;margin:4px 0}
+.popup-row b{display:inline-block;width:82px;color:#475569}
+
+@media(max-width:1050px){
+ .content{grid-template-columns:235px minmax(0,1fr)}
+ .right{display:none}
+}
+@media(max-width:700px){
+ .app{grid-template-rows:55px minmax(0,1fr)}
+ .header{height:55px;padding:0 12px}
+ .header h1{font-size:16px}
+ .header span{display:none}
+ .content{display:grid;grid-template-columns:1fr;grid-template-rows:225px minmax(0,1fr)}
+ .left{border-right:0;border-bottom:1px solid #d9e0e7}
+ .map-container{min-height:0}
+}
+
+.leaflet-control-layers{
+  border:1px solid #cbd5e1!important;
+  border-radius:8px!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)!important;
+  background:#fff!important;
+}
+.leaflet-control-layers-toggle{
+  width:38px!important;
+  height:38px!important;
+}
+.leaflet-control-layers-expanded{
+  padding:9px 11px!important;
+  font-size:12px!important;
+  line-height:1.7!important;
+}
+.map-status{
+  position:absolute;left:12px;bottom:12px;z-index:1000;
+  background:rgba(255,255,255,.94);padding:7px 10px;border-radius:7px;
+  box-shadow:0 1px 5px rgba(0,0,0,.2);font-size:11px;color:#475569;
+}
+
+
+.province-map-legend{
+  background:rgba(255,255,255,.96);
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+  padding:8px 10px;
+  min-width:125px;
+  max-width:180px;
+  max-height:42vh;
+  overflow-y:auto;
+  margin-top:8px;
+}
+.province-map-legend-title{
+  font-size:11px;
+  font-weight:800;
+  color:#17324d;
+  margin-bottom:6px;
+  padding-bottom:5px;
+  border-bottom:1px solid #e2e8f0;
+}
+.province-map-legend-row{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:10px;
+  line-height:15px;
+  margin:3px 0;
+  color:#334155;
+}
+.province-map-swatch{
+  width:13px;
+  height:10px;
+  flex:0 0 13px;
+  border:1px solid rgba(0,0,0,.18);
+  border-radius:2px;
+}
+
+</style>
+
+<style id="professional-gis-overrides">
+:root{
+  --navy:#102a43;
+  --navy2:#173f5f;
+  --blue:#1976d2;
+  --blue2:#0d6efd;
+  --bg:#eef2f6;
+  --panel:#ffffff;
+  --border:#d8e0e8;
+  --muted:#64748b;
+  --text:#172b4d;
+  --shadow:0 4px 18px rgba(15,35,55,.10);
+}
+body{background:var(--bg);color:var(--text)}
+.app{grid-template-rows:64px minmax(0,1fr)}
+.header{
+  height:64px;
+  background:linear-gradient(90deg,#102a43,#173f5f);
+  padding:0 20px;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
+  position:relative;
+  z-index:1100;
+}
+.header:before{
+  content:"";
+  width:4px;height:34px;background:#3aa0ff;border-radius:3px;
+  margin-right:2px;
+}
+.header h1{font-size:19px;letter-spacing:.1px}
+.header span{font-size:11px;color:#cbd8e5}
+.content{
+  grid-template-columns:300px minmax(0,1fr) 300px;
+  gap:0;
+}
+.left,.right{
+  padding:16px;
+  background:#f8fafc;
+}
+.left{border-right:1px solid var(--border)}
+.right{border-left:1px solid var(--border)}
+.map-container{background:#dce8f1}
+.title{
+  text-transform:uppercase;
+  letter-spacing:.7px;
+  font-size:11px;
+  color:#49647d;
+  margin:2px 0 12px;
+}
+.left .title:first-child,.right .title:first-child{
+  font-size:12px;font-weight:800;color:var(--navy);
+}
+label{
+  color:#425466;
+  font-size:11px;
+  margin:10px 0 5px;
+}
+select,input{
+  height:36px;
+  border:1px solid #c8d3df;
+  background:#fff;
+  border-radius:6px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+  transition:.15s ease;
+}
+select:focus,input:focus{
+  outline:none;border-color:#4b9bea;
+  box-shadow:0 0 0 3px rgba(25,118,210,.10);
+}
+button{
+  height:37px;
+  border-radius:6px;
+  background:var(--blue);
+  border-color:var(--blue);
+  box-shadow:0 2px 5px rgba(25,118,210,.18);
+}
+button:hover{filter:brightness(.96)}
+button.secondary{
+  background:#fff;
+  color:#34495e;
+  border-color:#c8d3df;
+  box-shadow:none;
+}
+.card{
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(15,35,55,.045);
+}
+.shape-card{
+  background:linear-gradient(135deg,#f8fbff,#ffffff);
+  border-left:4px solid var(--blue);
+}
+.shape-area-value{
+  font-size:25px;
+  font-weight:800;
+  color:var(--navy);
+}
+.pie-card{padding:12px}
+.pie-title{font-size:11px;text-transform:uppercase;letter-spacing:.45px}
+.pie-wrap{height:225px}
+.stat-big{font-size:23px}
+.right .card{margin-bottom:10px}
+.right .card:hover{box-shadow:var(--shadow)}
+.kpi strong{font-weight:800}
+.leaflet-control-zoom{
+  border:0!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)!important;
+}
+.leaflet-control-zoom a{
+  color:var(--navy)!important;
+  width:34px!important;height:34px!important;line-height:34px!important;
+}
+.leaflet-control-layers{
+  border:0!important;
+  border-radius:7px!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.18)!important;
+}
+.leaflet-control-layers-toggle{
+  width:38px!important;height:38px!important;
+}
+.map-status{
+  left:12px!important;bottom:12px!important;
+  border:1px solid #d6dee7;
+  box-shadow:0 3px 10px rgba(0,0,0,.14)!important;
+  color:#425466!important;
+}
+.gis-map-tools{
+  position:absolute;right:12px;top:12px;z-index:900;
+  display:flex;gap:6px;
+}
+.gis-map-tools button{
+  width:36px;height:36px;padding:0;margin:0;
+  background:#fff;color:var(--navy);
+  border:1px solid #d1dbe5;
+  border-radius:7px;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+  font-size:15px;
+}
+.gis-map-tools button:hover{background:#f3f7fb}
+.panel-heading{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.panel-badge{
+  font-size:9px;font-weight:700;padding:4px 7px;border-radius:10px;
+  background:#e8f2ff;color:#1664a6;
+}
+.dashboard-divider{
+  height:1px;background:#e2e8f0;margin:15px 0;
+}
+@media(max-width:1050px){
+ .content{grid-template-columns:250px minmax(0,1fr)}
+ .right{display:none}
+}
+@media(max-width:700px){
+ .content{grid-template-columns:1fr;grid-template-rows:235px minmax(0,1fr)}
+ .left{border-right:0;border-bottom:1px solid var(--border)}
+ .header{height:55px}
+ .app{grid-template-rows:55px minmax(0,1fr)}
+}
+</style>
+
+<style id="premium-aesthetic-v8">
+/* =========================================================
+   PREMIUM AESTHETIC THEME — warm ivory / deep green / muted gold
+   ========================================================= */
+:root{
+  --ivory:#f7f3e8;
+  --ivory-2:#fbfaf5;
+  --green:#173f35;
+  --green-2:#245d4f;
+  --green-3:#2f7562;
+  --gold:#b99a55;
+  --gold-soft:#eadfbd;
+  --ink:#20312b;
+  --muted:#6f7d76;
+  --line:#ded9c9;
+  --panel:#fffdf8;
+  --shadow:0 14px 35px rgba(31,55,45,.13);
+}
+html,body{background:var(--ivory)!important;color:var(--ink)}
+.app{grid-template-rows:66px minmax(0,1fr);background:var(--ivory)}
+.header{
+  height:66px;
+  background:linear-gradient(110deg,#143a31 0%,#1d4b3f 62%,#285d4d 100%);
+  padding:0 24px;
+  box-shadow:0 5px 18px rgba(18,48,39,.20);
+  border-bottom:1px solid rgba(234,223,189,.28);
+}
+.header:before{background:var(--gold);width:5px;height:38px;border-radius:8px}
+.header h1{font-size:20px;letter-spacing:.2px}
+.header span{color:#d9e4dd;font-size:11px;letter-spacing:.35px}
+.content{grid-template-columns:310px minmax(0,1fr) 305px;background:var(--ivory)}
+.left,.right{background:rgba(255,253,248,.97);padding:18px;border-color:var(--line)}
+.left{border-right:1px solid var(--line)}
+.right{border-left:1px solid var(--line)}
+.map-container{background:#e9e2cf}
+.title{color:var(--green)!important;letter-spacing:1px}
+.left .title:first-child,.right .title:first-child{color:var(--green)!important;font-size:12px}
+.panel-badge{background:#efe6ca;color:#735d29;border:1px solid #e0d3aa}
+label{color:#52645c;font-size:10px;letter-spacing:.8px;text-transform:uppercase}
+select,input{
+  height:39px;border:1px solid #d8d2c1;background:#fffefa;border-radius:10px;
+  color:var(--ink);box-shadow:0 2px 7px rgba(45,61,52,.045)
+}
+select:focus,input:focus{border-color:var(--green-3);box-shadow:0 0 0 3px rgba(47,117,98,.12)}
+button{height:39px;border-radius:10px;background:var(--green);border-color:var(--green);box-shadow:0 5px 12px rgba(23,63,53,.18)}
+button:hover{background:var(--green-2);filter:none}
+button.secondary{background:#f3efe3;color:var(--green);border-color:#d8d0bc}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;box-shadow:0 5px 18px rgba(38,52,45,.06)}
+.shape-card{background:linear-gradient(135deg,#fffdf7,#f3f8f3);border-left:4px solid var(--gold);position:relative;overflow:hidden}
+.shape-card:after{content:"";position:absolute;right:-28px;top:-28px;width:90px;height:90px;border-radius:50%;background:rgba(185,154,85,.10)}
+.shape-area-value{color:var(--green);font-size:27px}
+.shape-area-note,.pie-note,.stat-label{color:var(--muted)}
+.pie-card{padding:15px 13px 12px}
+.pie-title{color:var(--green);font-size:12px;letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px}
+.pie-wrap{height:285px}
+#shapeAreaPie{overflow:visible}
+.right .card{margin-bottom:12px;padding:14px 15px}
+.right .card:hover{box-shadow:var(--shadow);transform:translateY(-1px);transition:.18s ease}
+.stat-big{color:var(--green);font-size:27px}
+.kpi strong{color:var(--green)}
+.dashboard-divider{background:var(--line)}
+/* remove any toolbar/header-like white strip over the map */
+.gis-map-tools{position:absolute;right:16px;top:16px;z-index:1100;display:flex;gap:7px;background:transparent!important;padding:0!important;border:0!important;box-shadow:none!important}
+.gis-map-tools button{
+  width:40px;height:40px;margin:0;padding:0;background:rgba(255,253,248,.96);color:var(--green);
+  border:1px solid #d9d1bd;border-radius:12px;box-shadow:0 7px 18px rgba(30,48,40,.16);font-size:16px
+}
+.gis-map-tools button:hover{background:#fff;color:var(--green-2);transform:translateY(-1px)}
+/* compact map controls */
+.leaflet-control-zoom{border:0!important;box-shadow:0 7px 18px rgba(30,48,40,.14)!important}
+.leaflet-control-zoom a{background:rgba(255,253,248,.96)!important;color:var(--green)!important;border-color:#ddd5c3!important}
+.leaflet-control-layers{border:1px solid #d9d1bd!important;border-radius:12px!important;box-shadow:0 7px 18px rgba(30,48,40,.15)!important;background:rgba(255,253,248,.97)!important}
+.leaflet-control-layers-toggle{width:40px!important;height:40px!important;background-size:22px 22px!important}
+.leaflet-control-layers-expanded{padding:10px 12px!important;color:var(--green)!important}
+.map-status{background:rgba(255,253,248,.94)!important;border:1px solid #ddd5c3!important;color:#53635c!important;border-radius:10px!important}
+/* province legend */
+.province-map-legend{background:rgba(255,253,248,.97);border:1px solid #d9d1bd;border-radius:13px;box-shadow:0 8px 22px rgba(30,48,40,.15);padding:0;min-width:155px;max-width:205px;overflow:hidden;margin-top:8px}
+.province-map-legend-title{font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--green);padding:11px 12px 9px;margin:0;border-bottom:1px solid var(--line);background:#f4efe1;cursor:pointer}
+.province-map-legend-row{display:flex;align-items:center;gap:8px;font-size:10px;line-height:15px;margin:0;padding:5px 12px;color:#45564e;cursor:pointer}
+.province-map-legend-row:hover{background:#f4efe1}
+.province-map-swatch{width:13px;height:10px;flex:0 0 13px;border:1px solid rgba(0,0,0,.15);border-radius:3px}
+/* premium popup */
+.leaflet-popup-content-wrapper{background:rgba(255,253,248,.99);border:1px solid #d9d1bd;border-radius:17px;box-shadow:0 16px 40px rgba(24,48,39,.22);overflow:hidden}
+.leaflet-popup-tip{background:#fffdf8}
+.leaflet-popup-content{margin:0!important;width:290px!important}
+.premium-popup{font-family:Arial,Helvetica,sans-serif;color:var(--ink)}
+.pp-head{background:linear-gradient(135deg,#173f35,#286451);padding:15px 16px;color:white;position:relative}
+.pp-kicker{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:#d8c48c;font-weight:800;margin-bottom:4px}
+.pp-title{font-size:18px;font-weight:800;line-height:1.2;padding-right:18px}
+.pp-badge{display:inline-block;margin-top:8px;padding:4px 8px;border-radius:20px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);font-size:10px;color:#fff}
+.pp-body{padding:13px 15px 15px;background:#fffdf8}
+.pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.pp-item{background:#f5f1e7;border:1px solid #e7dfcb;border-radius:10px;padding:8px}
+.pp-label{font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:#7b847e;font-weight:800;margin-bottom:3px}
+.pp-value{font-size:11px;font-weight:700;color:#29463c;word-break:break-word}
+.pp-area{border-radius:11px;background:linear-gradient(135deg,#f0f6f0,#f8f2df);border:1px solid #ddd5bd;padding:10px 11px}
+.pp-area-label{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#7b6b40;font-weight:800}
+.pp-area-value{font-size:19px;font-weight:900;color:var(--green);margin-top:3px}
+.leaflet-popup-close-button{color:#fff!important;font-size:19px!important;right:7px!important;top:6px!important}
+@media(max-width:1050px){.content{grid-template-columns:260px minmax(0,1fr)}.right{display:none}}
+@media(max-width:700px){.content{grid-template-columns:1fr;grid-template-rows:245px minmax(0,1fr)}.left{border-right:0;border-bottom:1px solid var(--line)}.app{grid-template-rows:58px minmax(0,1fr)}.header{height:58px;padding:0 15px}.pie-wrap{height:250px}}
+</style>
+
+<style id="v10-theme-layout">
+:root{
+  --v10-deep:#003333;--v10-primary:#007f7f;--v10-accent:#126962;--v10-soft:#d2f7f4;
+  --v10-white:#ffffff;--v10-line:#b9dedb;--v10-text:#173f3d;--v10-muted:#557775;
+  --v10-shadow:0 8px 24px rgba(0,51,51,.12);
+}
+html,body{background:var(--v10-soft)!important;color:var(--v10-text)!important}
+.app{grid-template-rows:58px minmax(0,1fr)!important;background:var(--v10-soft)!important}
+.header{height:58px!important;background:linear-gradient(90deg,var(--v10-deep),var(--v10-accent))!important;padding:0 20px!important;box-shadow:0 3px 12px rgba(0,51,51,.22)!important;border-bottom:2px solid var(--v10-primary)!important}
+.header:before{background:var(--v10-primary)!important;width:5px;height:34px}
+.header h1{font-size:19px!important}.header span{color:var(--v10-soft)!important}
+.content{grid-template-columns:315px minmax(0,1fr) 320px!important;background:var(--v10-soft)!important}
+.left,.right{background:rgba(255,255,255,.98)!important;border-color:var(--v10-line)!important;padding:15px!important;overflow-y:auto!important;scrollbar-width:thin;scrollbar-color:var(--v10-primary) var(--v10-soft)}
+.left{border-right:1px solid var(--v10-line)!important}.right{border-left:1px solid var(--v10-line)!important}
+.map-container{background:var(--v10-soft)!important}
+.title,.left .title:first-child,.right .title:first-child{color:var(--v10-deep)!important}
+.panel-heading{margin-bottom:9px!important}
+.panel-badge{background:var(--v10-soft)!important;color:var(--v10-deep)!important;border:1px solid var(--v10-line)!important}
+label{color:var(--v10-accent)!important}
+select,input{border:1px solid var(--v10-line)!important;background:#fff!important;color:var(--v10-deep)!important}
+select:focus,input:focus{border-color:var(--v10-primary)!important;box-shadow:0 0 0 3px rgba(0,127,127,.14)!important}
+button{background:var(--v10-primary)!important;border-color:var(--v10-primary)!important;color:#fff!important;box-shadow:0 4px 10px rgba(0,127,127,.18)!important}
+button:hover{background:var(--v10-accent)!important}
+button.secondary{background:var(--v10-soft)!important;color:var(--v10-deep)!important;border-color:var(--v10-line)!important;box-shadow:none!important}
+.card{background:#fff!important;border:1px solid var(--v10-line)!important;border-radius:14px!important;box-shadow:var(--v10-shadow)!important}
+.left .stats-fixed{margin-bottom:13px}.left .stats-fixed .card{border-top:4px solid var(--v10-primary)!important;padding:11px 13px!important;margin-bottom:8px!important}.left .stats-fixed .card:last-child{border-top-color:var(--v10-accent)!important}.left .stats-fixed .stat-big{color:var(--v10-deep)!important;font-size:25px!important}
+.stat-label,.shape-area-note,.pie-note{color:var(--v10-muted)!important}
+.shape-card{background:linear-gradient(135deg,#fff,var(--v10-soft))!important;border-left:4px solid var(--v10-primary)!important}
+.shape-area-value{color:var(--v10-deep)!important;font-size:28px!important}
+.right .shape-card{margin-bottom:12px!important}.right .pie-card{border-top:4px solid var(--v10-accent)!important;padding:14px!important}
+.right .pie-title{color:var(--v10-deep)!important;font-size:12px!important}.right .pie-wrap{height:300px!important}.right .pie-note{margin-top:6px!important}
+.status{color:var(--v10-muted)!important;background:var(--v10-soft);border-radius:8px;padding:7px 8px}
+.gis-map-tools{position:absolute!important;right:14px!important;top:14px!important;z-index:1100!important;display:flex!important;gap:7px!important;background:transparent!important;padding:0!important;border:0!important;box-shadow:none!important}
+.gis-map-tools button{width:40px!important;height:40px!important;margin:0!important;padding:0!important;background:rgba(255,255,255,.97)!important;color:var(--v10-deep)!important;border:1px solid var(--v10-line)!important;border-radius:11px!important;box-shadow:0 7px 18px rgba(0,51,51,.18)!important}
+.gis-map-tools button:hover{background:var(--v10-soft)!important;color:var(--v10-primary)!important}
+.leaflet-control-zoom{border:1px solid var(--v10-line)!important;box-shadow:0 5px 15px rgba(0,51,51,.16)!important}
+.leaflet-control-zoom a{background:#fff!important;color:var(--v10-deep)!important;border-color:var(--v10-line)!important}.leaflet-control-zoom a:hover{background:var(--v10-soft)!important;color:var(--v10-primary)!important}
+.leaflet-control-layers{border:1px solid var(--v10-line)!important;background:rgba(255,255,255,.97)!important;box-shadow:0 6px 16px rgba(0,51,51,.15)!important}
+.map-status{background:rgba(255,255,255,.96)!important;border:1px solid var(--v10-line)!important;color:var(--v10-deep)!important}
+.province-map-legend{background:rgba(255,255,255,.97)!important;border:1px solid var(--v10-line)!important;box-shadow:0 8px 20px rgba(0,51,51,.16)!important}
+.province-map-legend-title{color:var(--v10-deep)!important;background:var(--v10-soft)!important;border-bottom:1px solid var(--v10-line)!important}
+.province-map-legend-row{color:var(--v10-text)!important}.province-map-legend-row:hover{background:var(--v10-soft)!important}
+.leaflet-popup-content-wrapper{border-color:var(--v10-line)!important;box-shadow:0 14px 36px rgba(0,51,51,.22)!important}
+.pp-head{background:linear-gradient(135deg,var(--v10-deep),var(--v10-accent))!important}.pp-kicker{color:var(--v10-soft)!important}
+.pp-body{background:#fff!important}.pp-item{background:var(--v10-soft)!important;border-color:var(--v10-line)!important}.pp-value{color:var(--v10-deep)!important}
+.pp-area{background:linear-gradient(135deg,#fff,var(--v10-soft))!important;border-color:var(--v10-line)!important}.pp-area-value{color:var(--v10-deep)!important}
+@media(max-width:1050px){.content{grid-template-columns:260px minmax(0,1fr)!important}.right{display:none!important}}
+@media(max-width:700px){.content{grid-template-columns:1fr!important;grid-template-rows:245px minmax(0,1fr)!important}.left{border-right:0!important;border-bottom:1px solid var(--v10-line)!important}}
+/* Zoom button overlap fix — layers control ko left shift karo */
+.leaflet-top.leaflet-right .leaflet-control-layers {
+  margin-right: 62px !important;
+}
+</style>
+
+<style id="about-map-style">
+  .about-map-card {
+    background: #ffffff;
+    border: 1px solid var(--v10-line);
+    border-left: 4px solid var(--v10-primary);
+    border-radius: 14px;
+    padding: 14px 15px;
+    margin-top: 14px;
+    box-shadow: var(--v10-shadow);
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .about-map-card:hover {
+    box-shadow: 0 10px 28px rgba(0,51,51,.16);
+    transform: translateY(-1px);
+  }
+  .about-map-title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    color: var(--v10-deep);
+    margin: 0 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--v10-line);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .about-map-title::before {
+    content: "🗺";
+    font-size: 14px;
+  }
+  .about-map-text {
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--v10-text);
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+  }
+  .about-map-note {
+    margin-top: 11px;
+    padding-top: 9px;
+    border-top: 1px dashed var(--v10-line);
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--v10-muted);
+    font-style: italic;
+  }
+</style>
+
+</head>
+
+<body>
+<div class="app">
+
+<header class="header">
+  <h1>Pakistan GIS</h1>
+  <span>Administrative Explorer</span>
+</header>
+
+<div class="content">
+
+<aside class="left">
+<div class="stats-fixed">
+  <div class="panel-heading"><div class="title" style="margin:0">Statistics</div></div>
+  <div class="card"><div class="stat-label">Total Areas</div><div class="stat-big" id="totalStat">0</div></div>
+  <div class="card"><div class="stat-label">Visible Areas</div><div class="stat-big" id="visibleStat">0</div></div>
+  <div class="card"><div class="stat-label">Selected Province</div><div class="stat-big" id="provinceStat" style="font-size:18px">All</div></div>
+</div>
+  <div class="panel-heading"><div class="title" style="margin:0">Map Filters</div></div>
+
+  <label>Province</label>
+  <select id="province"><option value="">All Provinces</option></select>
+
+  <label>District</label>
+  <select id="district"><option value="">All Districts</option></select>
+
+  <label>Area</label>
+  <select id="area"><option value="">All Areas</option></select>
+
+  <label>Search</label>
+  <input id="search" type="text" placeholder="Area, district, code...">
+
+  <button id="apply">Apply Filter</button>
+  <button id="reset" class="secondary">Reset Map</button>
+
+
+  <div class="status" id="status">Preparing map...</div>
+</aside>
+
+<main class="map-container">
+  <div class="gis-map-tools">
+    <button id="homeBtn" title="Zoom to Pakistan">⌂</button>
+  </div>
+  <div id="map"></div><div class="map-status" id="mapStatus">Loading map…</div>
+</main>
+
+<aside class="right">
+  <div class="panel-heading"><div class="title" style="margin:0">Shape Area Calculator</div></div>
+  <div class="card shape-card">
+    <div class="stat-label">SELECTED / DISPLAYED SHAPE AREA</div>
+   <div class="shape-area-value" id="shapeAreaValue">0 km²</div>
+    <div class="shape-area-note" id="shapeAreaNote">Total Shape Area of displayed areas</div>
+  </div>
+  <div class="card pie-card">
+    <div class="pie-title">Shape Area by Province</div>
+    <div class="pie-wrap"><canvas id="shapeAreaPie"></canvas></div>
+    <div class="pie-note" id="pieNote">Province distribution • Shape Area</div>
+    <div class="pie-note" id="pieAreaName" style="font-weight:700;color:#003333"></div>
+  </div>
+
+  <!-- ============ ABOUT THIS MAP (below graph) ============ -->
+  <div class="about-map-card">
+    <div class="about-map-title">About This Map</div>
+    <p class="about-map-text">
+      This map presents the administrative boundaries of Pakistan, showing the
+      country’s provinces, districts, and other administrative areas. These
+      boundaries provide a geographic framework for planning, governance,
+      development activities, and spatial analysis.
+    </p>
+    <p class="about-map-note">
+      The map is intended for visualization and reference purposes and may not
+      represent legally recognized or disputed territorial boundaries.
+    </p>
+  </div>
+  <!-- ============ /ABOUT THIS MAP ============ -->
+
+</aside>
+
+</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<script>
+// ------------------------------------------------------------
+// GLOBAL VARIABLES
+// ------------------------------------------------------------
+const map = L.map("map", {
+    center:[30.3753,69.3451],
+    zoom:5,
+    zoomControl:true,
+    preferCanvas:true,
+    renderer:L.canvas({padding:0.5})
+});
+
+const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom:19,
+    attribution:"&copy; OpenStreetMap contributors"
+});
+
+const cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    maxZoom:20,
+    attribution:"&copy; OpenStreetMap &copy; CARTO"
+});
+
+const cartoDark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom:20,
+    attribution:"&copy; OpenStreetMap &copy; CARTO"
+});
+
+const esriSatellite = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom:19,
+      attribution:"Tiles &copy; Esri"
+    }
+);
+
+osm.addTo(map);
+
+const baseMaps = {
+    "OpenStreetMap": osm,
+    "Light Map": cartoLight,
+    "Dark Map": cartoDark,
+    "Satellite": esriSatellite
+};
+
+L.control.layers(baseMaps, null, {
+    collapsed:true,
+    position:"topright"
+}).addTo(map);
+
+// ------------------------------------------------------------
+// ALL FEATURES – will be filled after GeoJSON loads
+// ------------------------------------------------------------
+let allFeatures = [];
+let mapLayer = null;
+let selectedLayer = null;
+
+const palette=[
+ "#003333","#007f7f","#126962","#4aa9a3","#78c9c3","#9adfd9"
+];
+const provinceColors={};
+let shapeAreaChart = null;
+let currentDisplayedFeatures = [];
+let currentSelectedFeature = null;
+
+// ------------------------------------------------------------
+// UTILITY FUNCTIONS
+// ------------------------------------------------------------
+function numericShapeArea(feature){
+    const v = Number(feature?.properties?.Shape_Area);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+}
+
+function formatShapeArea(value){
+    const n = Number(value) || 0;
+    return n.toLocaleString(undefined,{
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+    }) + " km²";
+}
+
+function sumShapeArea(features){
+    return features.reduce((sum,f)=>sum+numericShapeArea(f),0);
+}
+
+function clean(v){
+    return v===null || v===undefined ? "" : String(v).trim();
+}
+
+function esc(v){
+    return String(v ?? "").replace(/[&<>"']/g, function(c){
+        return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];
+    });
+}
+
+function getProvinceColor(name){
+    name=clean(name);
+    if(!provinceColors[name]){
+        const n=Object.keys(provinceColors).length;
+        provinceColors[name]=palette[n % palette.length];
+    }
+    return provinceColors[name];
+}
+
+// ------------------------------------------------------------
+// SHAPE AREA DISPLAY & PIE CHART
+// ------------------------------------------------------------
+function updateShapeAreaDisplay(features, selectedFeature=null){
+    const selectedArea = selectedFeature ? numericShapeArea(selectedFeature) : null;
+    const total = sumShapeArea(features);
+
+    if(selectedFeature){
+        document.getElementById("shapeAreaValue").textContent =
+            formatShapeArea(selectedArea);
+        document.getElementById("shapeAreaNote").textContent =
+            "Selected polygon • Shape_Area";
+    }else{
+        document.getElementById("shapeAreaValue").textContent =
+            formatShapeArea(total);
+        document.getElementById("shapeAreaNote").textContent =
+            "Total Shape Area of displayed areas";
+    }
+}
+
+function getProvinceShapeAreaDistribution(features){
+    const totals = {};
+
+    features.forEach(function(feature){
+        const province = clean(feature.properties?.Provinces) || "Unknown";
+        const area = numericShapeArea(feature);
+
+        if(!totals[province]) totals[province] = 0;
+        totals[province] += area;
+    });
+
+    const entries = Object.entries(totals)
+        .filter(x => x[1] > 0)
+        .sort((a,b) => b[1] - a[1]);
+
+    return {
+        labels: entries.map(x => x[0]),
+        values: entries.map(x => x[1])
+    };
+}
+
+function getFeaturesVisibleInMap(){
+    if(!currentDisplayedFeatures || !currentDisplayedFeatures.length){
+        return [];
+    }
+
+    const bounds = map.getBounds();
+    const visible = [];
+
+    if(mapLayer){
+        mapLayer.eachLayer(function(layer){
+            if(layer.getBounds && layer.feature){
+                try{
+                    if(bounds.intersects(layer.getBounds())){
+                        visible.push(layer.feature);
+                    }
+                }catch(e){}
+            }
+        });
+    }
+
+    return visible.length ? visible : currentDisplayedFeatures;
+}
+
+function makePieData(features){
+    const distribution = getProvinceShapeAreaDistribution(features);
+
+    return distribution.values.length
+        ? distribution
+        : {labels:["No Shape Area"],values:[1]};
+}
+
+function updateShapeAreaPie(features){
+    const data = makePieData(features);
+
+    if(shapeAreaChart){
+        shapeAreaChart.destroy();
+    }
+
+    const canvas = document.getElementById("shapeAreaPie");
+    const ctx = canvas.getContext("2d");
+
+    const barColors = data.labels.map(function(province){
+        return getProvinceColor(province);
+    });
+
+    const displayLabels = data.labels.map(function(province){
+        const matchingAreas = (features || []).filter(function(feature){
+            return (clean(feature.properties?.Provinces) || "Unknown") === province;
+        });
+        if(matchingAreas.length === 1){
+            return clean(matchingAreas[0].properties?.Area_Name) || province;
+        }
+        return province;
+    });
+
+    const total = data.values.reduce(function(a,b){ return a+b; },0) || 1;
+
+    shapeAreaChart = new Chart(ctx,{
+        type:"bar",
+        data:{
+            labels:displayLabels,
+            datasets:[{
+                label:"Shape Area",
+                data:data.values,
+                backgroundColor:barColors,
+                borderColor:barColors,
+                borderWidth:1,
+                borderRadius:7,
+                barPercentage:.68,
+                categoryPercentage:.78
+            }]
+        },
+        options:{
+            indexAxis:"y",
+            responsive:true,
+            maintainAspectRatio:false,
+            animation:{duration:300},
+            layout:{padding:{left:2,right:70,top:6,bottom:4}},
+            scales:{
+                x:{
+                    beginAtZero:true,
+                    grid:{color:"rgba(23,63,53,.08)"},
+                    border:{display:false},
+                    ticks:{
+                        color:"#68766f",
+                        font:{size:9},
+                        callback:function(value){ return Number(value).toLocaleString(undefined,{maximumFractionDigits:0}); }
+                    }
+                },
+                y:{
+                    grid:{display:false},
+                    border:{display:false},
+                    ticks:{
+                        color:"#29463c",
+                        font:{size:9,weight:"700"},
+                        padding:5,
+                        callback:function(value){
+                            const label=this.getLabelForValue(value) || "";
+                            return label.length>18 ? label.slice(0,17)+"…" : label;
+                        }
+                    }
+                }
+            },
+            plugins:{
+                legend:{display:false},
+                tooltip:{
+                    displayColors:true,
+                    callbacks:{
+                        title:function(items){ return items[0]?.label || ""; },
+                        label:function(context){
+                            const value=Number(context.raw)||0;
+                            const pct=value/total*100;
+                            return " Shape Area: " + formatShapeArea(value) + " • " + pct.toFixed(2) + "%";
+                        }
+                    }
+                }
+            }
+        },
+        plugins:[{
+            id:"barValueLabels",
+            afterDatasetsDraw:function(chart){
+                const ctx=chart.ctx;
+                const meta=chart.getDatasetMeta(0);
+                const values=chart.data.datasets[0].data || [];
+                ctx.save();
+                ctx.font="700 9px Arial";
+                ctx.textAlign="left";
+                ctx.textBaseline="middle";
+                meta.data.forEach(function(bar,index){
+                    const value=Number(values[index])||0;
+                    if(!value) return;
+                    const pct=value/total*100;
+                    const x=bar.x+7;
+                    const y=bar.y;
+                    ctx.lineWidth=3;
+                    ctx.strokeStyle="rgba(255,253,248,.95)";
+                    ctx.strokeText(pct.toFixed(2)+"%",x,y);
+                    ctx.fillStyle="#29463c";
+                    ctx.fillText(pct.toFixed(2)+"%",x,y);
+                });
+                ctx.restore();
+            }
+        }]
+    });
+
+    document.getElementById("pieNote").textContent =
+        "Province / area labels • percentage of visible Shape Area";
+}
+
+function refreshShapeAreaUI(features, selectedFeature=null){
+    currentDisplayedFeatures = features;
+    currentSelectedFeature = selectedFeature;
+
+    updateShapeAreaDisplay(features,selectedFeature);
+    const areaNameEl = document.getElementById("pieAreaName");
+    if(areaNameEl){
+        if(selectedFeature){
+            const p = selectedFeature.properties || {};
+            const area = clean(p.Area_Name);
+            const province = clean(p.Provinces);
+            areaNameEl.textContent = area
+                ? "Selected Area: " + area + (province ? " • " + province : "")
+                : "";
+        }else{
+            areaNameEl.textContent = "";
+        }
+    }
+    updateShapeAreaPie(getFeaturesVisibleInMap());
+}
+
+function refreshPieForCurrentMapView(){
+    updateShapeAreaPie(getFeaturesVisibleInMap());
+}
+
+// ------------------------------------------------------------
+// MAP STYLING & POPUP
+// ------------------------------------------------------------
+function style(feature){
+    return {
+        color:"#d2f7f4",
+        weight:0.9,
+        fillColor:getProvinceColor(feature.properties?.Provinces),
+        fillOpacity:0.72
+    };
+}
+
+function popup(feature){
+    const p=feature.properties || {};
+    const area=clean(p.Area_Name) || clean(p.District) || "Selected Area";
+    const province=clean(p.Provinces) || "—";
+    const district=clean(p.District) || "—";
+    const areaCode=clean(p.Area_code) || "—";
+    const dsCode=clean(p.DS_Code) || "—";
+    const shapeArea=formatShapeArea(numericShapeArea(feature));
+
+    return `
+      <div class="premium-popup">
+        <div class="pp-head">
+          <div class="pp-kicker">Selected Administrative Area</div>
+          <div class="pp-title">${esc(area)}</div>
+          <div class="pp-badge">${esc(province)}</div>
+        </div>
+        <div class="pp-body">
+          <div class="pp-grid">
+            <div class="pp-item">
+              <div class="pp-label">Province</div>
+              <div class="pp-value">${esc(province)}</div>
+            </div>
+            <div class="pp-item">
+              <div class="pp-label">District</div>
+              <div class="pp-value">${esc(district)}</div>
+            </div>
+            <div class="pp-item">
+              <div class="pp-label">Area Code</div>
+              <div class="pp-value">${esc(areaCode)}</div>
+            </div>
+            <div class="pp-item">
+              <div class="pp-label">DS Code</div>
+              <div class="pp-value">${esc(dsCode)}</div>
+            </div>
+          </div>
+          <div class="pp-area">
+            <div class="pp-area-label">Shape Area</div>
+            <div class="pp-area-value">${shapeArea}</div>
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+// ------------------------------------------------------------
+// DRAW GEOJSON
+// ------------------------------------------------------------
+function draw(features, zoomToData){
+    if(mapLayer){
+        map.removeLayer(mapLayer);
+        mapLayer=null;
+        selectedLayer=null;
+    }
+
+    document.getElementById("mapStatus").textContent =
+        "Drawing " + features.length + " area(s)…";
+
+    const fc={
+        type:"FeatureCollection",
+        features:features
+    };
+
+    mapLayer=L.geoJSON(fc,{
+        renderer:L.canvas({padding:0.5}),
+        style:style,
+        onEachFeature:function(feature,layer){
+            layer.bindPopup(popup(feature));
+
+            layer.on("mouseover",function(){
+                layer.setStyle({
+                    weight:2,
+                    color:"#003333",
+                    fillOpacity:0.86
+                });
+                layer.bringToFront();
+            });
+
+            layer.on("mouseout",function(){
+                if(layer!==selectedLayer){
+                    layer.setStyle(style(feature));
+                }
+            });
+
+            layer.on("click",function(){
+                if(selectedLayer && selectedLayer!==layer){
+                    selectedLayer.setStyle(style(selectedLayer.feature));
+                }
+                selectedLayer=layer;
+                layer.setStyle({
+                    weight:2.8,
+                    color:"#007f7f",
+                    fillOpacity:0.92
+                });
+
+                // Update Shape Area and pie chart for the clicked polygon.
+                updateShapeAreaDisplay(currentDisplayedFeatures, feature);
+                const areaNameEl = document.getElementById("pieAreaName");
+                if(areaNameEl){
+                    const p = feature.properties || {};
+                    const area = clean(p.Area_Name);
+                    const province = clean(p.Provinces);
+                    areaNameEl.textContent = area
+                        ? "Selected Area: " + area + (province ? " • " + province : "")
+                        : "";
+                }
+                refreshPieForCurrentMapView();
+            });
+        }
+    }).addTo(map);
+
+    currentDisplayedFeatures = features;
+    currentSelectedFeature = null;
+
+    document.getElementById("visibleStat").textContent=features.length;
+
+    // Filter/reset changes Shape Area total and pie chart.
+    refreshShapeAreaUI(features, null);
+
+    if(zoomToData && features.length){
+        const bounds=mapLayer.getBounds();
+        if(bounds.isValid()){
+            map.fitBounds(bounds,{padding:[20,20],maxZoom:8,animate:false});
+        }
+    }
+
+    document.getElementById("mapStatus").textContent =
+        features.length + " area(s) displayed";
+}
+
+// ------------------------------------------------------------
+// FILTER DROPDOWNS
+// ------------------------------------------------------------
+function uniqueValues(field, features){
+    return [...new Set(
+        features.map(f=>clean(f.properties?.[field])).filter(Boolean)
+    )].sort((a,b)=>a.localeCompare(b));
+}
+
+function setOptions(id, values, first){
+    const el=document.getElementById(id);
+    el.innerHTML=`<option value="">${first}</option>`;
+    values.forEach(v=>{
+        const op=document.createElement("option");
+        op.value=v;
+        op.textContent=v;
+        el.appendChild(op);
+    });
+}
+
+function updateDistricts(){
+    const province=document.getElementById("province").value;
+
+    const vals=uniqueValues(
+        "District",
+        allFeatures.filter(f=>!province || clean(f.properties?.Provinces)===province)
+    );
+
+    setOptions("district",vals,"All Districts");
+    setOptions("area",[],"All Areas");
+}
+
+function updateAreas(){
+    const province=document.getElementById("province").value;
+    const district=document.getElementById("district").value;
+
+    const vals=uniqueValues(
+        "Area_Name",
+        allFeatures.filter(f=>{
+            const p=f.properties || {};
+            return (!province || clean(p.Provinces)===province) &&
+                   (!district || clean(p.District)===district);
+        })
+    );
+
+    setOptions("area",vals,"All Areas");
+}
+
+function getFiltered(){
+    const province=document.getElementById("province").value;
+    const district=document.getElementById("district").value;
+    const area=document.getElementById("area").value;
+    const q=document.getElementById("search").value.trim().toLowerCase();
+
+    return allFeatures.filter(f=>{
+        const p=f.properties || {};
+        const text=[
+            p.Area_Name,p.District,p.Area_code,p.DS_Code,p.Provinces
+        ].map(clean).join(" ").toLowerCase();
+
+        return (!province || clean(p.Provinces)===province) &&
+               (!district || clean(p.District)===district) &&
+               (!area || clean(p.Area_Name)===area) &&
+               (!q || text.includes(q));
+    });
+}
+
+// ------------------------------------------------------------
+// APPLY / RESET
+// ------------------------------------------------------------
+function applyFilter(){
+    const features=getFiltered();
+    draw(features,true);
+
+    const province=document.getElementById("province").value || "All";
+    document.getElementById("provinceStat").textContent=province;
+    document.getElementById("status").textContent=
+        features.length+" area(s) displayed";
+}
+
+document.getElementById("province").addEventListener("change",function(){
+    updateDistricts();
+    updateAreas();
+});
+
+document.getElementById("district").addEventListener("change",updateAreas);
+document.getElementById("apply").addEventListener("click",applyFilter);
+
+document.getElementById("search").addEventListener("keydown",function(e){
+    if(e.key==="Enter") applyFilter();
+});
+
+document.getElementById("reset").addEventListener("click",function(){
+    document.getElementById("province").value="";
+    document.getElementById("search").value="";
+    updateDistricts();
+    updateAreas();
+    document.getElementById("provinceStat").textContent="All";
+
+    draw(allFeatures,true);
+    document.getElementById("status").textContent=
+        allFeatures.length+" area(s) displayed";
+});
+
+// ------------------------------------------------------------
+// INITIALIZE MAP & LOAD GEOJSON
+// ------------------------------------------------------------
+const provinceLegendControl = L.control({position:"bottomright"});
+
+provinceLegendControl.onAdd = function(){
+    const div = L.DomUtil.create("div","province-map-legend leaflet-control");
+    const title = document.createElement("div");
+    title.className = "province-map-legend-title";
+    title.textContent = "Province Legend";
+    div.appendChild(title);
+
+    const list = document.createElement("div");
+    list.className = "province-map-legend-list";
+
+    // Will be populated after GeoJSON loads
+    div.appendChild(list);
+
+    title.addEventListener("click", function(){
+        list.style.display = list.style.display === "none" ? "block" : "none";
+    });
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    return div;
+};
+
+provinceLegendControl.addTo(map);
+
+// Load the GeoJSON file "pakistan.geojson" from same folder
+fetch('pakistan.geojson')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(geojson => {
+        // Assign to global variable
+        allFeatures = Array.isArray(geojson.features) ? geojson.features : [];
+
+        // Populate province dropdown and legend
+        const provinces = uniqueValues("Provinces", allFeatures);
+        setOptions("province", provinces, "All Provinces");
+        updateDistricts();
+        updateAreas();
+
+        document.getElementById("totalStat").textContent = allFeatures.length;
+
+        // Populate the legend list inside the control
+        const legendList = document.querySelector('.province-map-legend-list');
+        if (legendList) {
+            legendList.innerHTML = '';
+            provinces.forEach(function(p){
+                const row = document.createElement("div");
+                row.className = "province-map-legend-row";
+                row.innerHTML =
+                    '<span class="province-map-swatch" style="background:'+getProvinceColor(p)+'"></span>'+
+                    '<span>'+esc(p)+'</span>';
+                row.title = "Filter map to " + p;
+                row.addEventListener("click", function(){
+                    const provinceSelect=document.getElementById("province");
+                    provinceSelect.value=p;
+                    updateDistricts();
+                    updateAreas();
+                    applyFilter();
+                });
+                legendList.appendChild(row);
+            });
+        }
+
+        // Draw the features
+        draw(allFeatures, true);
+
+        setTimeout(function(){
+            map.invalidateSize(true);
+            const visibleFeatures = getFeaturesVisibleInMap();
+            if(!currentSelectedFeature){
+                updateShapeAreaDisplay(visibleFeatures, null);
+            }
+            updateShapeAreaPie(visibleFeatures);
+        }, 500);
+    })
+    .catch(error => {
+        console.error('Error loading GeoJSON:', error);
+        document.getElementById("mapStatus").textContent = 'Error loading GeoJSON file.';
+        document.getElementById("status").textContent = 'Failed to load data. Make sure pakistan.geojson is in the same folder.';
+        // Fallback: try to show empty map
+        allFeatures = [];
+        document.getElementById("totalStat").textContent = '0';
+        setOptions("province", [], "All Provinces");
+        setOptions("district", [], "All Districts");
+        setOptions("area", [], "All Areas");
+    });
+
+// ------------------------------------------------------------
+// EVENT LISTENERS & FINALIZATION
+// ------------------------------------------------------------
+window.addEventListener("resize",function(){
+    setTimeout(function(){
+        map.invalidateSize(true);
+        refreshPieForCurrentMapView();
+    },100);
+});
+
+map.on("click",function(){
+    if(!currentSelectedFeature) return;
+    currentSelectedFeature = null;
+    const areaNameEl = document.getElementById("pieAreaName");
+    if(areaNameEl) areaNameEl.textContent = "";
+});
+
+map.on("zoomend moveend",function(){
+    // Recalculate Shape Area and province distribution from
+    // polygons currently visible in the map viewport.
+    const visibleFeatures = getFeaturesVisibleInMap();
+
+    if(!currentSelectedFeature){
+        updateShapeAreaDisplay(visibleFeatures, null);
+    }
+
+    updateShapeAreaPie(visibleFeatures);
+});
+
+// Professional GIS map utilities
+const initialPakistanView = {center:[30.3753,69.3451], zoom:5};
+
+document.getElementById("homeBtn").addEventListener("click", function(){
+    if(mapLayer && mapLayer.getBounds().isValid()){
+        map.fitBounds(mapLayer.getBounds(),{padding:[30,30],maxZoom:8,animate:true});
+    }else{
+        map.setView(initialPakistanView.center,initialPakistanView.zoom);
+    }
+});
+
+</script>
+</body>
+</html>
